@@ -1,0 +1,34 @@
+spec_version: 1
+name: traffic_control_env
+type: space
+runtime: fastapi
+app: server.app:app
+port: 8000
+
+description: >
+  Autonomous Traffic Control simulator where agents act as "City Traffic Controllers".
+  LLM agents use tools (get_network_status, get_intersection_status, set_traffic_light,
+  dispatch_emergency_vehicle, get_traffic_prediction) to resolve traffic gridlocks,
+  clear accidents, and route emergency vehicles through a connected city grid.
+  Expert scenarios feature inter-intersection flow — changing one light cascades
+  overflow into neighbouring intersections, requiring multi-step strategic planning.
+
+tasks:
+  - id: easy_rush_hour
+    description: Clear single-intersection N-S rush hour queue.
+    difficulty: easy
+  - id: medium_accident_response
+    description: Dispatch emergency vehicle to clear accident and unblock grid.
+    difficulty: medium
+  - id: hard_gridlock_unbraiding
+    description: Sequentially clear a deadlocked 3-intersection grid.
+    difficulty: hard
+  - id: hard_emergency_routing
+    description: Clear green corridor for an emergency vehicle across two linked intersections.
+    difficulty: hard
+  - id: expert_cascade_emergency
+    description: 3-intersection chain blocked by accident — restore flow to entire corridor.
+    difficulty: expert
+  - id: expert_ring_deadlock
+    description: 4-intersection ring deadlock — find unlock order to prevent cascade overflow.
+    difficulty: expert
