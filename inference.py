@@ -22,9 +22,9 @@ except ImportError:
     from traffic_control_env.models import TrafficControlAction
     from traffic_control_env.client import TrafficControlEnv
 
-API_KEY      = os.getenv("GEMINI_API_KEY") or os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-API_BASE_URL = os.getenv("API_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
-MODEL_NAME   = os.getenv("MODEL_NAME",   "gemini-2.0-flash-lite")
+API_KEY      = os.getenv("HF_TOKEN") or os.getenv("GEMINI_API_KEY") or os.getenv("API_KEY")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME   = os.getenv("MODEL_NAME",   "Qwen/Qwen2.5-72B-Instruct")
 BENCHMARK    = os.getenv("TRAFFIC_ENV_BENCHMARK", "traffic_control_env")
 PORT         = int(os.getenv("PORT", "8000"))
 DEBUG        = os.getenv("DEBUG", "").lower() in ("1", "true", "yes")
@@ -89,7 +89,7 @@ def _action_label(action: TrafficControlAction) -> str:
     if action.tool_name:
         args_str = json.dumps(action.tool_args or {})
         return f"{action.tool_name}({args_str})"
-    return ""
+    return "null"
 
 
 def log_start(task: str, model: str) -> None:
@@ -98,24 +98,18 @@ def log_start(task: str, model: str) -> None:
 
 def log_step(step: int, action: TrafficControlAction, reward: float, done: bool, error: Optional[str]) -> None:
     action_str = _action_label(action)
-    msg_str    = _trunc(action.message or "", 50)
     done_str   = str(done).lower()
     err_str    = error if error else "null"
-
-    parts = [f"[STEP] step={step}"]
-    if action_str:
-        parts.append(f"action={action_str}")
-    # Always show msg= on every step (empty string shows as msg='')
-    parts.append(f"msg='{msg_str}'")
-    parts.append(f"reward={reward:.2f} done={done_str} error={err_str}")
-    print(" ".join(parts), flush=True)
+    # Spec: [STEP] step=<n> action=<action_str> reward=<0.00> done=<true|false> error=<msg|null>
+    print(f"[STEP] step={step} action={action_str} reward={reward:.2f} done={done_str} error={err_str}", flush=True)
 
 
 def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    # Spec: reward and rewards formatted to 2 decimal places
     print(
         f"[END] success={str(success).lower()} steps={steps} "
-        f"score={score:.3f} rewards={rewards_str}",
+        f"score={score:.2f} rewards={rewards_str}",
         flush=True,
     )
 
