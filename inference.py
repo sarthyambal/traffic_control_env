@@ -414,7 +414,7 @@ async def run_episode(client: OpenAI, env: TrafficControlEnv, scenario_id: str) 
                 print("  [WARN] Agent completed all steps without taking a real action!",
                       flush=True)
 
-        score   = min(max(sum(rewards), 0.001), 0.999)
+        score   = min(max(sum(rewards), 0.01), 0.99)
         success = sum(rewards) > 0.0
 
     finally:
