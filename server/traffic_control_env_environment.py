@@ -131,7 +131,7 @@ class TrafficControlEnvironment(Environment):
 
         return TrafficControlObservation(
             done=done,
-            reward=round(step_reward, 4),
+            reward=round(self._safe_reward(step_reward), 4),
             customer_query=self._scenario.description,
             tool_result=tool_result,
             available_tools=list(TOOL_DESCRIPTIONS.values()),
@@ -149,6 +149,15 @@ class TrafficControlEnvironment(Environment):
         return self._state
 
     # ── reward helpers ────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _safe_reward(r: float) -> float:
+        """Clamp a step reward to the strict open interval (0.01, 0.99).
+
+        Prevents invalid 0.0 or negative rewards from being returned to
+        OpenEnv, which enforces strictly-bounded task scores.
+        """
+        return max(0.01, min(0.99, r))
 
     def _compute_tool_reward(
         self,
