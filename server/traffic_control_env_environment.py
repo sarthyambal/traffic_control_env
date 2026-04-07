@@ -123,11 +123,11 @@ class TrafficControlEnvironment(Environment):
 
         self._total_reward += step_reward
         self._total_reward = max(self._total_reward, -0.5)
-        self._state.partial_score = min(max(self._total_reward, 0.0), 1.0)
+        self._state.partial_score = min(max(self._total_reward, 0.001), 0.999)
 
         if done:
-            final = min(max(self._total_reward, 0.0), 1.0)
-            feedback_parts.append(f"Episode complete. Final score: {final:.2f}/1.00")
+            final = min(max(self._total_reward, 0.001), 0.999)
+            feedback_parts.append(f"Episode complete. Final score: {final:.3f}/1.000")
 
         return TrafficControlObservation(
             done=done,

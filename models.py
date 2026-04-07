@@ -50,7 +50,7 @@ class TrafficControlState(State):
     """Internal state."""
     scenario_id: str = "easy_rush_hour"
     difficulty: str = "easy"
-    partial_score: float = 0.0
+    partial_score: float = 0.001
     resolved: bool = False
     escalated: bool = False  # FIX Bug 5: field was missing, referenced in client.py _parse_state
     tools_called: List[str] = Field(default_factory=list)
