@@ -66,7 +66,7 @@ class TrafficControlEnvironment(Environment):
 
         return TrafficControlObservation(
             done=False,
-            reward=0.0,
+            reward=0.01,  # strict (0,1) — reset reward must not be 0.0
             customer_query=self._scenario.description,
             tool_result=None,
             available_tools=list(TOOL_DESCRIPTIONS.values()),
@@ -123,10 +123,10 @@ class TrafficControlEnvironment(Environment):
 
         self._total_reward += step_reward
         self._total_reward = max(self._total_reward, -0.5)
-        self._state.partial_score = min(max(self._total_reward, 0.01), 0.99)
+        self._state.partial_score = min(max(self._total_reward, 0.001), 0.999)
 
         if done:
-            final = min(max(self._total_reward, 0.01), 0.99)
+            final = min(max(self._total_reward, 0.001), 0.999)
             feedback_parts.append(f"Episode complete. Final score: {final:.3f}/1.000")
 
         return TrafficControlObservation(
@@ -152,12 +152,13 @@ class TrafficControlEnvironment(Environment):
 
     @staticmethod
     def _safe_reward(r: float) -> float:
-        """Clamp a step reward to the strict open interval (0.01, 0.99).
+        """Clamp a step reward to the strict open interval (0.001, 0.999).
 
-        Prevents invalid 0.0 or negative rewards from being returned to
-        OpenEnv, which enforces strictly-bounded task scores.
+        Prevents invalid 0.0, 1.0, negative, or out-of-range rewards from
+        being returned to OpenEnv, which enforces strictly-bounded task scores
+        per the Phase 2 validator: score must be strictly between 0 and 1.
         """
-        return max(0.01, min(0.99, r))
+        return max(0.001, min(0.999, r))
 
     def _compute_tool_reward(
         self,
