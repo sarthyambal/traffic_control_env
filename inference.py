@@ -6,6 +6,7 @@ and prints a formatted summary matching the OpenEnv evaluation format.
 """
 
 import asyncio
+import math
 import os
 import json
 import textwrap
@@ -100,8 +101,9 @@ def log_step(step: int, action: TrafficControlAction, reward: float, done: bool,
     action_str = _action_label(action)
     done_str   = str(done).lower()
     err_str    = error if error else "null"
-    # Spec: [STEP] step=<n> action=<action_str> reward=<0.00> done=<true|false> error=<msg|null>
-    print(f"[STEP] step={step} action={action_str} reward={reward:.2f} done={done_str} error={err_str}", flush=True)
+    # Spec: [STEP] step=<n> action=<action_str> reward=<0.0000> done=<true|false> error=<msg|null>
+    # Use .4f to prevent small values (e.g. 0.005) rounding to 0.00 which parses as 0.0
+    print(f"[STEP] step={step} action={action_str} reward={reward:.4f} done={done_str} error={err_str}", flush=True)
 
 
 def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
@@ -424,6 +426,9 @@ async def run_episode(client: OpenAI, env: TrafficControlEnv, scenario_id: str) 
         # Each individual reward is already clamped to (0.01, 0.99), so avg stays in that range.
         # Then clamp to strict (0.01, 0.99) as required by Phase 2 validator.
         avg_reward = (sum(rewards) / len(rewards)) if rewards else 0.05
+        # Handle non-finite values from division/accumulation
+        if math.isnan(avg_reward) or math.isinf(avg_reward):
+            avg_reward = 0.05
         score      = max(0.01, min(0.99, avg_reward))
         success    = bool(rewards)
 

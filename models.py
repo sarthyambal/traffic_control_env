@@ -12,6 +12,7 @@ control simulator where LLM agents manage city intersections, respond to
 accidents, and route emergency vehicles.
 """
 
+import math
 from typing import Optional, Dict, Any, List
 from openenv.core.env_server.types import Action, Observation, State
 from pydantic import Field, field_validator
@@ -36,7 +37,7 @@ class TrafficControlAction(Action):
 class TrafficControlObservation(Observation):
     """Observation from the Traffic Control Env environment."""
     done: bool = Field(default=False)
-    reward: float = Field(default=0.01)  # must be strictly > 0; never use 0.0 (Phase 2 validator rejects it)
+    reward: float = Field(default=0.05)  # must be strictly in (0, 1); never use 0.0 or 1.0
     customer_query: str = Field(default="")
     tool_result: Optional[Dict[str, Any]] = Field(None, description="Result of the tool execution")
     feedback: str = Field(default="", description="System feedback")
@@ -45,6 +46,25 @@ class TrafficControlObservation(Observation):
     difficulty: str = Field(default="")
     steps_taken: int = Field(default=0)
     max_steps: int = Field(default=15)
+
+    @field_validator("reward", mode="before")
+    @classmethod
+    def clamp_reward(cls, v):
+        """Phase 2 validator requires reward strictly in (0, 1) — never 0.0 or 1.0.
+        This model-level validator is the ultimate safety net."""
+        if v is None:
+            return 0.05
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            return 0.05
+        if math.isnan(v) or math.isinf(v):
+            return 0.05
+        if v <= 0.0:
+            return 0.01
+        if v >= 1.0:
+            return 0.99
+        return v
 
 class TrafficControlState(State):
     """Internal state."""

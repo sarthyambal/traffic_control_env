@@ -53,9 +53,16 @@ class TrafficControlEnv(
             max_steps=obs_data.get("max_steps", 15),
         )
 
+        # Clamp reward to strict (0, 1) — Phase 2 validator rejects 0.0 and 1.0
+        raw_reward = payload.get("reward")
+        if raw_reward is None or not isinstance(raw_reward, (int, float)):
+            safe_reward = 0.05
+        else:
+            safe_reward = max(0.01, min(0.99, float(raw_reward)))
+
         return StepResult(
             observation=observation,
-            reward=payload.get("reward"),
+            reward=safe_reward,
             done=payload.get("done", False),
         )
 

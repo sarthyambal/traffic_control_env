@@ -1,4 +1,5 @@
 import copy
+import math
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
@@ -160,7 +161,10 @@ class TrafficControlEnvironment(Environment):
         """
         if self._state.step_count == 0:
             return 0.5
-        avg = self._total_reward / self._state.step_count
+        avg = self._total_reward / max(self._state.step_count, 1)
+        # Handle non-finite results from division
+        if math.isnan(avg) or math.isinf(avg):
+            return 0.5
         return max(0.01, min(0.99, avg))
 
     @staticmethod
@@ -168,12 +172,16 @@ class TrafficControlEnvironment(Environment):
         """Clamp a single step reward to the strict open interval (0.01, 0.99).
 
         Phase 2 validator requires score strictly between 0 and 1 — never 0.0 or 1.0.
+        Also handles NaN/inf edge cases.
         """
+        # Handle non-finite values
+        if not isinstance(r, (int, float)) or math.isnan(r) or math.isinf(r):
+            return 0.05
         if r >= 1.0:
             return 0.99
-        elif r <= 0.0:
+        if r <= 0.0:
             return 0.01
-        return r
+        return float(r)
 
     def _compute_tool_reward(
         self,
