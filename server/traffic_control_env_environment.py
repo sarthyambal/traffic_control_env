@@ -84,7 +84,7 @@ class TrafficControlEnvironment(Environment):
         **kwargs: Any,
     ) -> TrafficControlObservation:
         self._state.step_count += 1
-        step_reward = 0.0
+        step_reward = 0.01  # baseline — ensures no-op steps never produce 0.0
         tool_result = None
         feedback_parts: List[str] = []
 
