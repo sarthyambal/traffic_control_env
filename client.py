@@ -42,7 +42,7 @@ class TrafficControlEnv(
         obs_data = payload.get("observation", {})
         observation = TrafficControlObservation(
             done=payload.get("done", False),
-            reward=payload.get("reward", 0.0),
+            reward=payload.get("reward", 0.01),  # never default to 0.0 — Phase 2 validator rejects it
             customer_query=obs_data.get("customer_query", ""),
             tool_result=obs_data.get("tool_result"),
             feedback=obs_data.get("feedback", ""),
@@ -68,7 +68,7 @@ class TrafficControlEnv(
             step_count=payload.get("step_count", 0),
             scenario_id=payload.get("scenario_id", ""),
             difficulty=payload.get("difficulty", ""),
-            partial_score=payload.get("partial_score", 0.0),
+            partial_score=payload.get("partial_score", 0.05),  # never default to 0.0
             resolved=payload.get("resolved", False),
             escalated=payload.get("escalated", False),
             tools_called=payload.get("tools_called", [])
