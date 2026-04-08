@@ -103,15 +103,17 @@ class TrafficControlEnvironment(Environment):
             self._tool_calls_detail.append(call_sig)
 
             if is_duplicate:
-                step_reward += self._scenario.penalty_repeated_tool
-                feedback_parts.append(f"⚠ Duplicate call penalty ({action.tool_name}): {self._scenario.penalty_repeated_tool:+.2f}")
+                # Clamp penalty — never allow raw negative into accumulator
+                dup_penalty = self._safe_reward(self._scenario.penalty_repeated_tool)
+                step_reward += dup_penalty
+                feedback_parts.append(f"⚠ Duplicate call penalty ({action.tool_name}): {dup_penalty:+.2f}")
             else:
                 tool_reward = self._compute_tool_reward(action.tool_name, action.tool_args, tool_result, tool_call_ordinal)
                 step_reward += tool_reward
                 if tool_reward > 0:
                     feedback_parts.append(f"✓ Good action +{tool_reward:.2f}")
-                elif tool_reward < 0:
-                    feedback_parts.append(f"✗ Wrong tool {tool_reward:.2f}")
+                else:
+                    feedback_parts.append(f"✗ Suboptimal action {tool_reward:.2f}")
 
         if action.message:
             msg_reward = self._compute_message_reward(action.message)
@@ -121,8 +123,9 @@ class TrafficControlEnvironment(Environment):
 
         done = self._check_done()
 
-        self._total_reward += step_reward
-        self._total_reward = max(self._total_reward, -0.5)
+        # Clamp step_reward before accumulating — prevents any 0.0 or negative
+        safe_step = self._safe_reward(step_reward)
+        self._total_reward += safe_step
         self._state.partial_score = self.compute_final_score()
 
         if done:
@@ -184,7 +187,8 @@ class TrafficControlEnvironment(Environment):
         scenario = self._scenario
 
         if tool_name not in scenario.correct_tool_sequence:
-            return scenario.penalty_wrong_tool
+            # Clamp wrong-tool penalty — never return raw negative
+            return max(0.01, scenario.penalty_wrong_tool)
 
         reward = 0.0
 
@@ -208,7 +212,8 @@ class TrafficControlEnvironment(Environment):
         else:
             reward = scenario.partial_rewards.get(tool_name, 0.0)
 
-        return reward
+        # Force all tool rewards through safe clamp before returning
+        return self._safe_reward(reward)
 
     def _compute_message_reward(self, message: str) -> float:
         if not self._scenario:
@@ -225,7 +230,7 @@ class TrafficControlEnvironment(Environment):
         if hits == 0:
             return 0.01
 
-        reward = ratio * 0.2
+        reward = max(0.01, ratio * 0.2)  # floor to 0.01 — never return 0.0
 
         if ratio >= 0.5:
             total_q = sum(sum(d["queue"].values()) for d in self._city_grid.values())
