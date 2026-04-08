@@ -103,8 +103,8 @@ class TrafficControlEnvironment(Environment):
             self._tool_calls_detail.append(call_sig)
 
             if is_duplicate:
-                # Clamp penalty — never allow raw negative into accumulator
-                dup_penalty = self._safe_reward(self._scenario.penalty_repeated_tool)
+                # Raw penalty — will be clamped once via safe_step below
+                dup_penalty = self._scenario.penalty_repeated_tool
                 step_reward += dup_penalty
                 feedback_parts.append(f"⚠ Duplicate call penalty ({action.tool_name}): {dup_penalty:+.2f}")
             else:
