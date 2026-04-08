@@ -123,15 +123,15 @@ class TrafficControlEnvironment(Environment):
 
         self._total_reward += step_reward
         self._total_reward = max(self._total_reward, -0.5)
-        self._state.partial_score = min(max(self._total_reward, 0.001), 0.999)
+        self._state.partial_score = self.compute_final_score()
 
         if done:
-            final = min(max(self._total_reward, 0.001), 0.999)
+            final = self.compute_final_score()
             feedback_parts.append(f"Episode complete. Final score: {final:.3f}/1.000")
 
         return TrafficControlObservation(
             done=done,
-            reward=round(self._safe_reward(step_reward), 4),
+            reward=self._safe_reward(step_reward),
             customer_query=self._scenario.description,
             tool_result=tool_result,
             available_tools=list(TOOL_DESCRIPTIONS.values()),
@@ -150,15 +150,26 @@ class TrafficControlEnvironment(Environment):
 
     # ── reward helpers ────────────────────────────────────────────────────────
 
+    def compute_final_score(self) -> float:
+        """Compute the final episode score as the average per-step reward,
+        strictly clamped to (0.01, 0.99) as required by the Phase 2 validator.
+        """
+        if self._state.step_count == 0:
+            return 0.5
+        avg = self._total_reward / self._state.step_count
+        return max(0.01, min(0.99, avg))
+
     @staticmethod
     def _safe_reward(r: float) -> float:
-        """Clamp a step reward to the strict open interval (0.001, 0.999).
+        """Clamp a single step reward to the strict open interval (0.01, 0.99).
 
-        Prevents invalid 0.0, 1.0, negative, or out-of-range rewards from
-        being returned to OpenEnv, which enforces strictly-bounded task scores
-        per the Phase 2 validator: score must be strictly between 0 and 1.
+        Phase 2 validator requires score strictly between 0 and 1 — never 0.0 or 1.0.
         """
-        return max(0.001, min(0.999, r))
+        if r >= 1.0:
+            return 0.99
+        elif r <= 0.0:
+            return 0.01
+        return r
 
     def _compute_tool_reward(
         self,
@@ -168,7 +179,7 @@ class TrafficControlEnvironment(Environment):
         call_ordinal: int,  # 0-indexed count of this tool BEFORE this call
     ) -> float:
         if not self._scenario:
-            return 0.0
+            return 0.01
 
         scenario = self._scenario
 
@@ -201,18 +212,18 @@ class TrafficControlEnvironment(Environment):
 
     def _compute_message_reward(self, message: str) -> float:
         if not self._scenario:
-            return 0.0
+            return 0.01
 
         msg_lower = message.lower()
         kw_list = self._scenario.resolution_keywords
         if not kw_list:
-            return 0.0
+            return 0.01
 
         hits = sum(1 for kw in kw_list if kw.lower() in msg_lower)
         ratio = hits / len(kw_list)
 
         if hits == 0:
-            return 0.0
+            return 0.01
 
         reward = ratio * 0.2
 
