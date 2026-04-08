@@ -124,6 +124,7 @@ class TrafficControlEnvironment(Environment):
         done = self._check_done()
 
         # Clamp step_reward before accumulating — prevents any 0.0 or negative
+        step_reward = max(0.02, step_reward)
         safe_step = self._safe_reward(step_reward)
         self._total_reward += safe_step
         self._state.partial_score = self.compute_final_score()
